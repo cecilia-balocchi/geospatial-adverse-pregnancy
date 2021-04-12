@@ -1,13 +1,14 @@
 ## Importing the data
 
-The script `import_data.R` loads the fake pregnancies dataset, merges it with the philadelphia neighborhood data and performs the needed transformations to get the dataset ready for running the models.
+The script `import_data.R` loads the fake pregnancies dataset, merges it with the Philadelphia neighborhood data and performs the needed transformations to get the dataset ready for running the models.
 
 ## Running the models
 
 The script `meta_script.R` runs all the models considered. It imports code from other scripts:
-- `MCMC_pg_nogamma_rho.R` contains the function to run the MCMC,
+- `MCMC_pg.R` contains the function to run the MCMC using Polya-Gamma (pg),
 - `philly_alldata.R` runs the MCMC when all the data is used (no leave one out by year),
 - `philly_LOO.R` runs the MCMC when the leave one out by year is used.
+
 Several options are set before running each model, which are used to select the right code within `philly_alldata.R` and `philly_LOO.R`:
 - `smote_bool`, which is set to TRUE when we want to run a model using SMOTE
 - `outcome`, which can be "PRETERM" or "STILLBIRTH"

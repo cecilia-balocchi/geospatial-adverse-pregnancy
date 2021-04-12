@@ -34,14 +34,8 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
   # beta is  N(b0, tau2_beta * I)
   # alpha is N(a0, tau2_alpha * prior_prec_alpha^-1)
   
-  # let's make sure that there is a column of 1's in X
-  # no_intercept <- FALSE
-  # if(any(X[,1] != 1)){
-  #   X <- cbind(1,X)
-  #   no_intercept <- TRUE
-  # }
   if(all(X[,1]==1)){
-    warning("mcmc: including a vector of 1's in X introduces identifiability problems.")
+    warning("mcmc: including a vector of 1's in X introduces identifiability problems with random effects.")
   }
   
   # given mapping, we create the matrix
@@ -84,7 +78,7 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
     }
     # cat(k_iter, " ")
     prior_prec_alpha = get_prior_prec(w.sym, rho, nalpha)
-    ## sample PG
+    ## sample PG (polya gamma)
     ## tmp_par should be logit(p_i), ie beta * x_i, in our case we also add the random effects
     tmp_par <- as.numeric(alpha_cur[mapping$tract] + X %*% beta_cur) 
     w <- rpg(length(tmp_par), 1, tmp_par)
@@ -117,10 +111,8 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
     if(sample_tau){
       ## sample tau2_beta
       tau2_beta <- 1/rgamma(1, shape = shape_b + p1/2, rate = rate_b + sum((beta_cur - b0)^2)/2)
-      ## sample tau2_alpha - conditional on the value of alpha_cur, but not on gamma_cur MORE ACF
+      ## sample tau2_alpha - conditional on the value of alpha_cur, but not on gamma_cur
       res <- alpha_cur - a0
-      # s2_tau2alpha <- t(res) %*% prior_prec_alpha %*% res / nu_tau2alpha
-      # tau2_alpha <- 1/rgamma(1, shape = shape_a + nu_tau2alpha/2, rate = rate_a + s2_tau2alpha*nu_tau2alpha/2)
       s2_tau2alpha <- t(res) %*% prior_prec_alpha %*% res
       tau2_alpha <- 1/rgamma(1, shape = shape_a + nu_tau2alpha/2, rate = rate_a + s2_tau2alpha/2)
     }
@@ -131,7 +123,6 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
       rho_new <- rbeta(1, shape1 = b*rho/(1-rho), shape2 = b)
       
       prior_prec_new <- get_prior_prec(w.sym, rho_new, nalpha)
-      # prior_prec_alpha
       
       res <- alpha_cur - a0
       post_ratio <- as.numeric(-t(res)%*%(prior_prec_new-prior_prec_alpha)%*%(res)/(2*tau2_alpha))
@@ -158,12 +149,6 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
     A0[1+k_iter] <- a0
     RHO[1+k_iter] <- rho
   }
-  # if(no_intercept){
-  #   BETA0 <- BETA[1,]
-  #   BETA <- BETA[-1,]
-  # } else {
-  #   BETA0 <- 0*BETA[1,]
-  # }
   
   return(list(alpha = ALPHA, beta = BETA, rho = RHO,
               tau2_alpha = TAU2_ALPHA, tau2_beta = TAU2_BETA, 
@@ -196,51 +181,3 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
 #             niter = NITER,
 #             w.sym = wtmp,
 #             tau2_alpha = 0.1, tau2_beta = 0.1)
-
-
-# str(tmp)
-# 
-# plot(tmp$beta[1,])
-# plot(tmp$beta[2,])
-# plot(tmp$beta[3,])
-# plot(tmp$beta[4,])
-# plot(tmp$beta[5,])
-
-# rowMeans(tmp$b0)
-# rowMeans(tmp$alpha)
-# plot(tmp$alpha[1,])
-# plot(tmp$alpha[2,])
-# plot(tmp$alpha[3,] + tmp$beta0)
-
-# plot(tmp$tau2_alpha, type = 'l')
-# plot(tmp$tau2_beta, type = 'l')
-# plot(tmp$a0, type = 'l')
-# 
-# acf(tmp$beta[1,index])
-# acf(tmp$alpha[1,index])
-# acf(tmp$gamma[1,index])
-# acf(tmp$tau2_alpha[index])
-# acf(tmp$tau2_beta[index])
-# acf(tmp$tau2_gamma[index])
-
-
-
-# apply(tmp$beta, 1, function(x){c(quantile(x, probs = 0.025),mean(x),quantile(x, probs = 0.975))}); beta
-# j <- 2
-# plot(tmp$beta[j,10:NITER], type = 'l'); mean(tmp$beta[j,10:NITER])
-# abline(h = beta[j]); beta[j]
-# 
-# apply(tmp$alpha, 1, function(x){c(quantile(x, probs = 0.025),mean(x),quantile(x, probs = 0.975))}); as.numeric(alpha)
-# i = 4
-# plot(tmp$alpha[i,10:NITER], type = 'l'); mean(tmp$alpha[i,10:NITER])
-# abline(h=alpha[i])
-# 
-# apply(tmp$gamma, 1, function(x){c(quantile(x, probs = 0.025),mean(x),quantile(x, probs = 0.975))}); as.numeric(gamma)
-# i = 1
-# plot(tmp$gamma[i,10:NITER], type = 'l'); mean(tmp$gamma[i,10:NITER])
-# abline(h=gamma[i])
-# 
-# theta_hat <- inverse_link(X %*% apply(tmp$beta, 1, mean) + apply(tmp$alpha, 1, mean)[mapping$tract])
-# # plot(theta, theta_hat); abline(0,1)
-# ## does the estimated model have higher loglik?
-# sum(Y*log(theta) + (1-Y)*log(1-theta)) < sum(Y*log(theta_hat) + (1-Y)*log(1-theta_hat))
