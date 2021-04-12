@@ -19,7 +19,7 @@ Several options are set before running each model, which are used to select the 
 ## Creating tables and figures
 
 The script `create_figures.R` creates the illustration for the bayes-p and the plot of the log-odds (Figures .. and .. in the manuscript).
-The script `create_maps.R` creates the maps of the proportions of pregnancies events and of the predicted probabilities. (TODO complete create_maps.R with the map of proportions).
+The script `create_maps.R` creates the maps of the proportions of pregnancies events and of the predicted probabilities. (TODO complete create_maps.R with the map of proportions). The script `functions_scale.R` was downloaded from http://egallic.fr/en/scale-bar-and-north-arrow-on-a-ggplot2-map/ and used to add a bar with a scale for the map.
 
 The script `create_tables.R` creates the table reported in the manuscript.
 (TODO decide whether to keep or not the neighborhood comparison table)

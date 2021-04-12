@@ -165,7 +165,12 @@ data.preg.tractcov.atleast10 = data.philly.atleast10[,c("tractID", "YEAR", "PREG
                                                         "log.occupied.housing", "log.violation", "log.violent", "log.nonviolent",
                                                         "black_interaction", "white_interaction", "asian_interaction", "hispanic_interaction")]
 
-
+### this is used to make figure 1.
+deliveries_by_tract_after_preprocessing = as.data.frame(data.philly.atleast10 %>% group_by(tractID) %>% summarise(deliveries = n()))
+ratio_by_tract_after_preprocessing = as.data.frame(data.philly.atleast10 %>% group_by(tractID) %>% summarise(preterm_ratio = sum(PRETERM)/n(), stillbirth_ratio = sum(STILLBIRTH)/n()))
+save(list = c("deliveries_by_tract_after_preprocessing",
+              "ratio_by_tract_after_preprocessing"), 
+     file = paste0(fldr, "results/plot_ratios_by_tract.RData"))
 
 # head(data.preg.tractcov.atleast10)
 # dim(data.preg.tractcov.atleast10)
