@@ -1,3 +1,4 @@
+## please call this function from meta_script.R (or assign the values initialized in meta_script.R before running this).
 # rm(list = ls())
 library(dplyr)
 library(pROC)
@@ -546,5 +547,5 @@ if(noRE_bool == TRUE){
   filename <- paste0(filename, "_noRE")
 }
 filename <- paste0(filename, "_newcov_", outcome, "_",prior,".RData")
-save(list = varlist, file = paste0(fldr, "scripts/", filename))
+save(list = varlist, file = paste0("results/", filename))
 

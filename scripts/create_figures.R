@@ -20,6 +20,7 @@ mtext("Bayes-p illustration", outer = TRUE, cex = 1.5, line = -2)
 dev.off()
 
 ################### plot logodds ###################
+wdstr <- "results/"
 
 noNH_WHITE_bool <- TRUE
 bayesp <- function(x){max(mean(x>0),mean(x<0))}
@@ -55,7 +56,7 @@ order_covariates <- c("age","Black","Hispanic","Asian","multiple_birth",
 index <- match(order_covariates,c(var_individual, var_neighborhood))
 
 ## do this for both PRETERM and STILLBIRTH 
-wdstr <- "results/"
+
 
 ### For PRETERM. Uncomment the lines with the stillbirth code to make the plot for STILLBIRTH.
 ### noSMOTE

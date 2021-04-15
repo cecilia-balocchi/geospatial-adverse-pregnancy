@@ -1,15 +1,14 @@
-# setwd("../cecis_scripts/")
+# rm(list = ls())
+
 library(sp)
-library(spdep)
-library(rgeos)
-library(RColorBrewer)
+library(rgeos) # needed for maptools
 library(ggplot2)
 library(ggmap)
 library(dplyr)
 library(maptools)
 
-source("functions_scale.R")
-load("data/phillytracts"))
+source("scripts/functions_scale.R")
+load("data/phillytracts")
 load("data/phillygooglemap.rdata")
 wdstr <- "results/"
 
@@ -97,6 +96,25 @@ burnin <- 500
 thin <- 10
 mcmc_niter <- 500*thin+burnin 
 index_thinning <- seq(burnin, mcmc_niter, by = thin)
+
+noNH_WHITE_bool <- TRUE
+bayesp <- function(x){max(mean(x>0),mean(x<0))}
+var_neighborhood <- c("prop_Asian", "prop_Hispanic", "prop_Black", # "Prop_White", 
+                      "prop_women_15_to_50", "prop_women_below_poverty", 
+                      "prop_women_public_assistance", "prop_women_labor_force", 
+                      "prop_birth_last_12_months", "prop_women_HS_grad", 
+                      "prop_women_college_grad", "log_occupied_housing", "log_housing_violation", 
+                      "log_violent_crime", "log_nonviolent_crime")
+if(noNH_WHITE_bool){
+  var_individual <- c("Hispanic","Black", "Asian", "multiple_birth", "age")
+} else {
+  var_individual <- c("Hispanic","White","Black", "Asian", "multiple_birth", "age")
+}
+
+
+p1 <- length(var_individual)
+p2 <- length(var_neighborhood)
+col_to_be_scaled <- p1:(p1+p2)
 
 SMOTE_bool <- FALSE
 

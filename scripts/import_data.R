@@ -1,45 +1,28 @@
+rm(list = ls())
 library(spdep)
+library(dplyr)
 ## read fake datasets
-setwd("Geographic_analysis/")
-
-# note: rownames are different but who cares
-data.new.philly <- read.csv("RANDOM_DATA_AND_SCRIPT/data.new.philly_RANDOM_NEW.csv")
-# data.new.philly$tractID <- as.character(data.new.philly$tractID)
-
-## read datasets with Philadelphia neighborhoods covariates
 data_path <- "data/"
+
+# Import the synthetic data
+data.new.philly <- read.csv(paste0(data_path,"data.new.philly_RANDOM_NEW.csv"))
+# head(data.new.philly)
+
+## read Philadelphia shapefile with spatial info on census tracts
 load(paste0(data_path,"phillytracts"))
 tract_df = tracts@data
 
 ## Load covariates data
-fldr=""
-
-philly_all_covariates <- read.csv(paste(fldr, "data/ALL_NEIGHBORHOOD_COVARIATES_YEARLY_PHILLY.csv",sep=""),
+philly_all_covariates <- read.csv(paste0(data_path, "ALL_NEIGHBORHOOD_COVARIATES_YEARLY_PHILLY.csv"),
                                         header=TRUE,sep=",")
 # head(philly_all_covariates)
 # colnames(philly_all_covariates)
 philly_all_covariates <- philly_all_covariates[,-c(48:49)] ## Remove imm_dang and unsafe as too many NA's
-
-## Change column name "GEOID10" to "tractID"
-colnames(philly_all_covariates)[1] <- c("tractID")
-# colnames(philly_all_covariates)
-
-### careful!! tract is NOT tractID
-if(!all(data.new.philly[,14] < 400)){
-  colnames(data.new.philly)[14]<- c("tractID")
-}
+colnames(philly_all_covariates)[1] <- c("tractID") ## Change column name "GEOID10" to "tractID"
 
 ## Merge covariates with data.new.philly
 data.new.philly <- base::merge(data.new.philly, philly_all_covariates, by=c("tractID","YEAR"), all=FALSE)
 data.new.philly$tractID <- as.character(data.new.philly$tractID)
-
-## Number of total observations, total number of preterm births and stillbirths 
-total_tracts = length(unique(data.new.philly$tractID))
-total_observations = dim(data.new.philly)[1]
-preterm_col = data.new.philly[,colnames(data.new.philly)=="PRETERM"]
-total_preterm = length(which(preterm_col==1))
-stillbirth_col = data.new.philly[,colnames(data.new.philly)=="STILLBIRTH"]
-total_stillbirth = length(which(stillbirth_col==1))
 
 ## Let's select which tracts to keep, considering the leave-one-out (LOO) and that we want to have
 ## at least 10 deliveries in each tract in each iteration of the leave-one-out 
@@ -71,10 +54,6 @@ var_neighborhood1 <- c("Prop_Asian", "Prop_Hispanic_Latino", "Prop_Black",
 index.data.NA <- which(apply(X = data.new.philly[,var_neighborhood1], MARGIN = 1, FUN = function(x) any(is.na(x))))
 tractID.NA <- unique(data.new.philly[index.data.NA,"tractID"])
 
-## Deprecated:
-# tractID.after.NA <- unique(data.new.philly[-index.data.NA,"tractID"])
-# tractID_tokeep <- tractID_tokeep[which(tractID_tokeep %in% tractID.after.NA)]
-
 ## remember that the new covariates vary over time, so some years can be NA and others no.
 ## so, subsetting based on the neighborhoords will leave some NAs!
 ## problem is: it's possible when we exclude 1 year, we get less neighborhoods that the ones here
@@ -101,7 +80,6 @@ w.sym <- w + t(w) - w*t(w)
 w.sym <- w.sym[index.wsym, index.wsym]
 which(rowSums(w.sym)==0)
 # if something is returned, it means some rows are indeed isolated and we need to remove them
-
 if( sum(rowSums(w.sym)==0) > 0){
   ## Since some are isolated, let's remove them
   exclude_index = index.wsym[which(rowSums(w.sym) == 0)] # these are the rows of tract_df that we should also exclude
@@ -120,15 +98,6 @@ dim(data.new.philly)
 index_tokeep = which(data.new.philly$tractID %in% tractID_tokeep)
 ## this is data.new.philly restricted to the tracts with at least 10 - USE THIS
 data.philly.atleast10 = data.new.philly[index_tokeep,]
-
-## total observations, total number of preterm births and stillbirths 
-## after preprocessing (i.e. removing missing data and tracts with <10 pregnancies or isolated tracts) 
-tracts_after_preprocessing = length(tractID_tokeep)
-total_observations_after_preprocessing = dim(data.philly.atleast10)[1]
-preterm_after_preprocessing = data.philly.atleast10$PRETERM
-total_preterm_after_preprocessing = length(which(preterm_after_preprocessing==1))
-stillbirth_after_preprocessing = data.philly.atleast10$STILLBIRTH
-total_stillbirth_after_preprocessing = length(which(stillbirth_after_preprocessing==1))
 
 ## Transform the number of occupied housing units,
 ## the umber of housing violations, 
@@ -170,36 +139,10 @@ deliveries_by_tract_after_preprocessing = as.data.frame(data.philly.atleast10 %>
 ratio_by_tract_after_preprocessing = as.data.frame(data.philly.atleast10 %>% group_by(tractID) %>% summarise(preterm_ratio = sum(PRETERM)/n(), stillbirth_ratio = sum(STILLBIRTH)/n()))
 save(list = c("deliveries_by_tract_after_preprocessing",
               "ratio_by_tract_after_preprocessing"), 
-     file = paste0(fldr, "results/plot_ratios_by_tract.RData"))
+     file = paste0("results/", "plot_ratios_by_tract.RData"))
 
 # head(data.preg.tractcov.atleast10)
 # dim(data.preg.tractcov.atleast10)
 #45919 pregnancies!
 
-# PRETERM IS A FACTOR!! [NOT with the fake data!!]
-# data.preg.tractcov.atleast10$PRETERM = as.numeric(levels(data.preg.tractcov.atleast10$PRETERM))[data.preg.tractcov.atleast10$PRETERM]
-
-# 
-# ## Export a CSV file
-# before.after.numbers <- c(total_tracts,
-#                           total_observations,
-#                           total_preterm,
-#                           total_stillbirth,
-#                           tracts_after_preprocessing,
-#                           total_observations_after_preprocessing,
-#                           total_preterm_after_preprocessing,
-#                           total_stillbirth_after_preprocessing)
-# 
-# names(before.after.numbers) <- c("Total Tracts Before Preprocessing",
-#                                  "Total Observations Before Preprocessing",
-#                                  "Total Preterm Before Preprocessing",
-#                                  "Total Stillbirth Before Preprocessing",
-#                                  "Total Tracts After Preprocessing",
-#                                  "Total Observations After Preprocessing",
-#                                  "Total Preterm After Preprocessing",
-#                                  "Total Stillbirth After Preprocessing")
-# before.after.numbers <- as.data.frame(before.after.numbers)
-
-# Write CSV file
-# write.csv(before.after.numbers, paste(fldr, "scripts/before_and_after_summary_statistics.csv",sep=""))
 

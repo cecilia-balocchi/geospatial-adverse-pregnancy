@@ -1,15 +1,15 @@
+library(xtable)
+wdstr <- "results/"
 ##########################################################
 ############ Model comparison table (table 2) ############
 ##########################################################
 
-library(xtable)
+add_str <- "noNH_WHITE_"; add_str2 <- "";
 
-wdstr <- "results/"
 ####### ALLDATA & noSMOTE
 ### PRETERM
 tmp <-load(paste0(wdstr,"output_alldata_nogamma_rho_nointeractions_",add_str,"newcov_PRETERM_CAR",add_str2,".RData"))
 noSMOTE_CAR <- c(mean(auc), mean(DIC), mean(rmse), mean(DIC_shifted), mean(rmse_shifted), mean(misclass), mean(sens), mean(spec), mean(WAIC1), mean(WAIC1_shifted), mean(WAIC2), mean(WAIC2_shifted))
-rho_noSMOTE <- quantile(output_list[[1]]$rho, probs = c(0.025,0.25,0.5,0.75,0.975))
 tmp <-load(paste0(wdstr,"output_alldata_nogamma_rho_nointeractions_",add_str,"newcov_PRETERM_independent",add_str2,".RData"))
 noSMOTE_ind <- c(mean(auc), mean(DIC), mean(rmse), mean(DIC_shifted), mean(rmse_shifted), mean(misclass), mean(sens), mean(spec), mean(WAIC1), mean(WAIC1_shifted), mean(WAIC2), mean(WAIC2_shifted))
 tmp <-load(paste0(wdstr,"output_alldata_nogamma_rho_nointeractions_",add_str,"noRE_newcov_PRETERM_independent",add_str2,".RData"))
@@ -23,7 +23,6 @@ res_pret_alld_noSMOTE <- res_pret_alld_noSMOTE[,c("DIC", "WAIC1", "WAIC2")]
 ### STILLBIRTH
 tmp <-load(paste0(wdstr,"output_alldata_nogamma_rho_nointeractions_",add_str,"newcov_STILLBIRTH_CAR",add_str2,".RData"))
 noSMOTE_CAR <- c(mean(auc), mean(DIC), mean(rmse), mean(DIC_shifted), mean(rmse_shifted), mean(misclass), mean(sens), mean(spec), mean(WAIC1), mean(WAIC1_shifted), mean(WAIC2), mean(WAIC2_shifted))
-rho_noSMOTE <- quantile(output_list[[1]]$rho, probs = c(0.025,0.25,0.5,0.75,0.975))
 tmp <-load(paste0(wdstr,"output_alldata_nogamma_rho_nointeractions_",add_str,"newcov_STILLBIRTH_independent",add_str2,".RData"))
 noSMOTE_ind <- c(mean(auc), mean(DIC), mean(rmse), mean(DIC_shifted), mean(rmse_shifted), mean(misclass), mean(sens), mean(spec), mean(WAIC1), mean(WAIC1_shifted), mean(WAIC2), mean(WAIC2_shifted))
 tmp <-load(paste0(wdstr,"output_alldata_nogamma_rho_nointeractions_",add_str,"noRE_newcov_STILLBIRTH_independent",add_str2,".RData"))
@@ -90,8 +89,8 @@ res_still_all <- res_still_all[,-(2:5)]
 
 res_still <- rbind(res_still_loo, res_still_all)
 
-round(t(res_pret),3)
-round(t(res_still),3)
+# round(t(res_pret),3)
+# round(t(res_still),3)
 
 res <- t(rbind(res_still, res_pret))
 xtable(res, digits = 3)
