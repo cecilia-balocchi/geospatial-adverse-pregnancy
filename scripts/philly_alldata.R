@@ -1,9 +1,5 @@
 ## please call this function from meta_script.R (or assign the values initialized in meta_script.R before running this).
 # rm(list = ls())
-library(dplyr)
-library(pROC)
-library(sp)
-library(DMwR) # Needed for the SMOTE method
 
 index_thinning <- seq(burnin, mcmc_niter, by = thin)
 

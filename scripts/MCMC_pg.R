@@ -1,7 +1,5 @@
-require(MASS)
 require(mvtnorm)
 require(BayesLogit)
-require(mvtnorm)
 inverse_link <- function(alpha){
   1/(1+exp(-(alpha)))
 }
