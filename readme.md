@@ -6,7 +6,8 @@ Please follow the following instructions to run the code.
 
 1. Install the following R packages used for the data analysis and replication of figures and tables:
 ```
-install.packages(c("mvtnorm", "BayesLogit", "sp", "maptools", "ggplot2", "ggmap", "dplyr", "rgeos", "pROC", "DMwR", "spdep"))
+install.packages(c("mvtnorm", "BayesLogit", "sp", "maptools", "ggplot2", 
+                    "ggmap", "dplyr", "rgeos", "pROC", "DMwR", "spdep"))
 ```
 
 2. Import and merge the data patient level data and Philadelphia neighborhood data using `script/import_data.R`. Synthetic patient level data are available in `data/`, together with all the Philadelphia neighborhood data used for our analysis, merged into one file. Further details on how to download and merge the original data sources are provided in `data/`.
