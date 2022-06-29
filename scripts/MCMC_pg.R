@@ -8,7 +8,7 @@ get_prior_prec <- function(w.sym, rho, nalpha){
 }
 
 mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
-                 tau2_beta = 10, tau2_alpha = 1, sample_rho = TRUE, sample_tau = TRUE){
+                 tau2_beta = 10, tau2_alpha = 1, alpha_reweight = 1, beta_reweight = 1, sample_rho = TRUE, sample_tau = TRUE){
   ## mapping is a dataframe with a column "tract" that tells us which tract (from 1 to n) the observation belongs to
   p1 <- ncol(X)
   alpha_un <- unique(mapping$tract)
@@ -16,13 +16,12 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
   
   shape_a <- 0.1
   rate_a <- 0.1
+  s_taualpha <- 1
   
   shape_b <- 0.1
   rate_b <- 0.1
+  s_taubeta <- 1
   
-  ## if b0 is a scalar:
-  # b0 <- 0          ## b0 ~ N(0, tau2_b0)
-  ## if b0 is a vector:
   b0 <- rep(0, p1)   ## b0 ~ N(0, tau2_b0 * I)
   tau2_b0 <- 10^2
   
@@ -32,7 +31,7 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
   # beta is  N(b0, tau2_beta * I)
   # alpha is N(a0, tau2_alpha * prior_prec_alpha^-1)
   
-  if(all(X[,1]==1)){
+  if(all(X[,1]==1)){ # let's make sure that there is a column of 1's in X
     warning("mcmc: including a vector of 1's in X introduces identifiability problems with random effects.")
   }
   
@@ -47,9 +46,6 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
   BETA <- matrix(0, p1, 1+niter)
   TAU2_ALPHA <- numeric(1+niter)
   TAU2_BETA <- numeric(1+niter)
-  ## if b0 is a scalar:
-  # B0 <- numeric(1+niter)
-  ## if b0 is a vector:
   B0 <- matrix(0, p1, 1+niter)
   A0 <- numeric(1+niter)
   RHO <- numeric(1+niter)
@@ -61,9 +57,6 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
   BETA[,1] <- as.numeric(beta_cur)   ## effects of time varying covariates
   TAU2_ALPHA[1] <- tau2_alpha
   TAU2_BETA[1] <- tau2_beta
-  ## if b0 is a scalar:
-  # B0[1] <- b0
-  ## if b0 is a vector:
   B0[,1] <- as.numeric(b0)
   A0[1] <- a0
   RHO[1] <- rho
@@ -74,13 +67,14 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
     if(k_iter %% 10 == 0){
       cat(k_iter, " ")
     }
-    # cat(k_iter, " ")
     prior_prec_alpha = get_prior_prec(w.sym, rho, nalpha)
     ## sample PG (polya gamma)
     ## tmp_par should be logit(p_i), ie beta * x_i, in our case we also add the random effects
     tmp_par <- as.numeric(alpha_cur[mapping$tract] + X %*% beta_cur) 
-    w <- rpg(length(tmp_par), 1, tmp_par)
-    y_tilde <- (y - 0.5)/w
+    bi <- alpha_reweight * rep(1, length(tmp_par)) + (beta_reweight - alpha_reweight) * y ## this works for all cases; either alpha or beta = 1
+    w <- rpg(length(tmp_par), bi, tmp_par)
+    ki <- y - 0.5 * (bi)
+    y_tilde <- ki/w
     
     if(nalpha == 1){
       prec_post_alpha <- as.numeric(mappingMAT %*% w) + prior_prec_alpha / tau2_alpha
@@ -100,23 +94,41 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
     m_beta <- V_beta %*% m_beta_tmp 
     beta_cur <- t(rmvnorm(1, m_beta, V_beta))
     
-    ## if b0 is a scalar:
-    # b0 <- rnorm(1, (p1/tau2_beta*mean(beta_cur))/(p1/tau2_beta + 1/tau2_b0), sd = 1/sqrt(p1/tau2_beta + 1/tau2_b0))
-    ## if b0 is a vector:
     b0 <- rnorm(p1, (beta_cur/tau2_beta)/(1/tau2_beta + 1/tau2_b0), sd = 1/sqrt(1/tau2_beta + 1/tau2_b0))
     a0 <- rnorm(1, (nalpha/tau2_alpha*mean(alpha_cur))/(nalpha/tau2_alpha + 1/tau2_a0), sd = 1/sqrt(nalpha/tau2_alpha + 1/tau2_a0))
-    
+
     if(sample_tau){
+      ## this was assuming tau2_beta ~ invGamma
       ## sample tau2_beta
-      tau2_beta <- 1/rgamma(1, shape = shape_b + p1/2, rate = rate_b + sum((beta_cur - b0)^2)/2)
-      ## sample tau2_alpha - conditional on the value of alpha_cur, but not on gamma_cur
+      # tau2_beta <- 1/rgamma(1, shape = shape_b + p1/2, rate = rate_b + sum((beta_cur - b0)^2)/2)
+      
+      ## this was assuming tau2_alpha ~ invGamma
+      ## sample tau2_alpha - conditional on the value of alpha_cur, but not on gamma_cur MORE ACF
+      # res <- alpha_cur - a0
+      # # s2_tau2alpha <- t(res) %*% prior_prec_alpha %*% res / nu_tau2alpha
+      # # tau2_alpha <- 1/rgamma(1, shape = shape_a + nu_tau2alpha/2, rate = rate_a + s2_tau2alpha*nu_tau2alpha/2)
+      # s2_tau2alpha <- t(res) %*% prior_prec_alpha %*% res
+      # tau2_alpha <- 1/rgamma(1, shape = shape_a + nu_tau2alpha/2, rate = rate_a + s2_tau2alpha/2)
+
+      ## this is assuming tau2_beta ~ half cauchy : p(tau_beta) propto (tau_beta^2 + s^2)^{-1}
+      tau2_beta_prop <- 1/rgamma(1, shape = p1/2, rate = sum((beta_cur - b0)^2)/2)
+      acc <- (tau2_beta + s_taubeta^2)/(tau2_beta_prop + s_taubeta^2) * (sqrt(tau2_beta_prop)/sqrt(tau2_beta))
+      if(runif(1) < acc){
+        tau2_beta <- tau2_beta_prop
+      }
+      
+      ## this is assuming tau2_alpha ~ half cauchy : p(tau_alpha) propto (tau_alpha^2 + s^2)^{-1}
       res <- alpha_cur - a0
-      s2_tau2alpha <- t(res) %*% prior_prec_alpha %*% res
-      tau2_alpha <- 1/rgamma(1, shape = shape_a + nu_tau2alpha/2, rate = rate_a + s2_tau2alpha/2)
+      s2_tau2alpha <- t(res) %*% prior_prec_alpha %*% res / 2
+      tau2_alpha_prop <- 1/rgamma(1, shape = nalpha/2, rate = s2_tau2alpha)
+      acc <- (tau2_alpha + s_taualpha^2)/(tau2_alpha_prop + s_taualpha^2) * (sqrt(tau2_alpha_prop)/sqrt(tau2_alpha))
+      if(runif(1) < acc){
+        tau2_alpha <- tau2_alpha_prop
+      } 
     }
     
     if(sample_rho){
-      # my proposal is beta(a,b) with a = b*mu/(1-mu) and b = 10
+      # the proposal is beta(a,b) with a = b*mu/(1-mu) and b = 10
       b <- 5
       rho_new <- rbeta(1, shape1 = b*rho/(1-rho), shape2 = b)
       
@@ -140,9 +152,6 @@ mcmc <- function(y, mapping, X, niter, w.sym, rho = 0.9, a_rho = 10, b_rho = 10,
     BETA[, 1+k_iter] <- as.numeric(beta_cur)
     TAU2_ALPHA[1+k_iter] <- tau2_alpha
     TAU2_BETA[1+k_iter] <- tau2_beta
-    ## if b0 is a scalar:
-    # B0[1+k_iter] <- b0
-    ## if b0 is a vector:
     B0[,1+k_iter] <- as.numeric(b0)
     A0[1+k_iter] <- a0
     RHO[1+k_iter] <- rho

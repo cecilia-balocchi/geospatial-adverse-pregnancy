@@ -89,15 +89,14 @@ ggsave(file_name, p, scale = 1, width = 8, height = 8, units = 'in')
 
 
 #############################################################################
-################## Map of predicted probabilities (fig 4) ###################
+########### Map of predicted probabilities (top panels of fig 5) ############
 #############################################################################
 
 burnin <- 500
-thin <- 10
-mcmc_niter <- 500*thin+burnin 
+thin <- 5
+mcmc_niter <- 1000*thin+burnin
 index_thinning <- seq(burnin, mcmc_niter, by = thin)
 
-noNH_WHITE_bool <- TRUE
 bayesp <- function(x){max(mean(x>0),mean(x<0))}
 var_neighborhood <- c("prop_Asian", "prop_Hispanic", "prop_Black", # "Prop_White", 
                       "prop_women_15_to_50", "prop_women_below_poverty", 
@@ -105,104 +104,59 @@ var_neighborhood <- c("prop_Asian", "prop_Hispanic", "prop_Black", # "Prop_White
                       "prop_birth_last_12_months", "prop_women_HS_grad", 
                       "prop_women_college_grad", "log_occupied_housing", "log_housing_violation", 
                       "log_violent_crime", "log_nonviolent_crime")
-if(noNH_WHITE_bool){
-  var_individual <- c("Hispanic","Black", "Asian", "multiple_birth", "age")
-} else {
-  var_individual <- c("Hispanic","White","Black", "Asian", "multiple_birth", "age")
-}
+var_individual <- c("Hispanic","Black", "Asian", "multiple_birth", "age")
 
 
 p1 <- length(var_individual)
 p2 <- length(var_neighborhood)
 col_to_be_scaled <- p1:(p1+p2)
 
-SMOTE_bool <- FALSE
+var_str <- c("avg_phat_samples", "avg_yhat_samples","avg_phat2_samples", 
+             "avg_phat2shift_samples","avg_phat_shift_samples")
 
-if(SMOTE_bool){
-  tmp <- load(paste0(wdstr,"output_alldata_nogamma_rho_SMOTE_nointeractions_noNH_WHITE_newcov_PRETERM_independent.RData"))
-} else {
-  tmp <-load(paste0(wdstr,"output_alldata_nogamma_rho_nointeractions_noNH_WHITE_newcov_PRETERM_independent.RData"))
-}
-scale_sds <- scale_sds_list[[1]]
-scale_mus <- scale_means_list[[1]]
-
-output1 <- output_list1[[1]]
-output2 <- output_list2[[1]]
-alphas <- cbind(output1$alpha[,index_thinning, drop = FALSE],
-                output2$alpha[,index_thinning, drop = FALSE])
-alphas <- rowMeans(alphas)
-betas <- cbind(output1$beta[,index_thinning, drop = FALSE],
-                 output2$beta[,index_thinning, drop = FALSE])
-beta <- rowMeans(betas)
-beta <- beta[col_to_be_scaled]/as.numeric(scale_sds[col_to_be_scaled])
-alphas <- alphas - sum(beta * as.numeric(scale_mus[col_to_be_scaled]))
-
-data_CAR_PRE <- data.frame(tractID = tractID_unique_list[[1]],  
-                           phat_all = mean_phat_all_list[[1]], phat2_all = mean_phat2_all_list[[1]],
-                           phat2shift_all = mean_phat2shift_all_list[[1]], phat_neig = phat_neig_list[[1]],
-                           phatshift_neigh = phat_neigshift_list[[1]],
-                           alpha = alphas)
-rm(list = tmp)
-
-
-if(SMOTE_bool){
-  tmp <- load(paste0(wdstr,"output_alldata_nogamma_rho_SMOTE_nointeractions_noNH_WHITE_newcov_STILLBIRTH_CAR.RData"))
-} else {
-  tmp <- load(paste0(wdstr,"output_alldata_nogamma_rho_nointeractions_noNH_WHITE_newcov_STILLBIRTH_CAR.RData"))
-}
-scale_sds <- scale_sds_list[[1]]
-scale_mus <- scale_means_list[[1]]
-
-output1 <- output_list1[[1]]
-output2 <- output_list2[[1]]
-alphas <- cbind(output1$alpha[,index_thinning, drop = FALSE],
-                output2$alpha[,index_thinning, drop = FALSE])
-alphas <- rowMeans(alphas)
-betas <- cbind(output1$beta[,index_thinning, drop = FALSE],
-               output2$beta[,index_thinning, drop = FALSE])
-beta <- rowMeans(betas)
-beta <- beta[col_to_be_scaled]/as.numeric(scale_sds[col_to_be_scaled])
-alphas <- alphas - sum(beta * as.numeric(scale_mus[col_to_be_scaled]))
-
-data_CAR_STILL <- data.frame(tractID = tractID_unique_list[[1]],  
-                             phat_all = mean_phat_all_list[[1]], phat2_all = mean_phat2_all_list[[1]],
-                             phat2shift_all = mean_phat2shift_all_list[[1]], phat_neig = phat_neig_list[[1]],
-                             phatshift_neigh = phat_neigshift_list[[1]],
-                             alpha = alphas)
-rm(list = tmp)
-
-
-PRE_bool <- FALSE
-
-alpha_bool <- FALSE
-phat_bool <- FALSE
-shift_bool <- FALSE
-
-if(alpha_bool){
-  var1 <- data_CAR_PRE$alpha
-  var2 <- data_CAR_STILL$alpha
-} else {
-  if(phat_bool){
-    var1 <- data_CAR_PRE$phat_all
-    var2 <- data_CAR_STILL$phat_all
-  } else {
-    if(shift_bool){
-      var1 <- data_CAR_PRE$phat2shift_all
-      var2 <- data_CAR_STILL$phat2shift_all
-    } else {
-      var1 <- data_CAR_PRE$phat2_all
-      var2 <- data_CAR_STILL$phat2_all
-    }
+year <- 8; add_str <- ""; add_str2 <- "_YEAR8"
+for(output_string in c("PRETERM", "STILLBIRTH")){
+  tmp <-load(paste0(wdstr,"output_LOO_nogamma_rho_nointeractions_",add_str,"newcov_",output_string,"_CAR",add_str2,".RData"))
+  
+  for(x in var_str){
+    assign(ifelse(output_string == "PRETERM",paste0(x,"_PRE"),paste0(x,"_STILL")), get(x))
   }
+  
+  x = "tractID_unique"
+  assign(ifelse(output_string == "PRETERM",paste0(x,"_PRE"),paste0(x,"_STILL")), tractID_unique_list[[year]])
 }
+
+PRE_bool <- TRUE # FALSE # TRUE
+shift_bool <- FALSE # shift (i.e. calibrating probabilities), is needed only for SMOTE or reweight
 
 if(PRE_bool){
-  var <- var1; group_ind <- match(data_CAR_PRE$tractID, tracts@data$GEOID10)
+  if(shift_bool){
+    var1 <- rowMeans(avg_phat_shift_samples_PRE)
+    var2 <- rowMeans(avg_phat2shift_samples_PRE)
+  } else {
+    var1 <- rowMeans(avg_phat_samples_PRE)
+    var2 <- rowMeans(avg_phat2_samples_PRE)
+  }
+  group_ind <- match(tractID_unique_PRE, tracts@data$GEOID10)
 } else {
-  var <- var2; group_ind <- match(data_CAR_STILL$tractID, tracts@data$GEOID10)
+  if(shift_bool){
+    var1 <- rowMeans(avg_phat_shift_samples_STILL)
+    var2 <- rowMeans(avg_phat2shift_samples_STILL)
+  } else {
+    var1 <- rowMeans(avg_phat_samples_STILL)
+    var2 <- rowMeans(avg_phat2_samples_STILL)
+  }
+  group_ind <- match(tractID_unique_STILL, tracts@data$GEOID10)
 }
-# vars <- c(var1, var2)
-vars <- c(var) # for now we ignore the comparison with SMOTE
+
+phat_bool <- TRUE  ## we ended up using phat instead of phat2, as more interpretable
+if(phat_bool){
+  var <- var1
+} else {
+  var <- var2 
+}
+vars <- c(var1, var2)
+
 
 polyfortified <- fortify(tracts)
 limits <- c(min(vars, na.rm=T), max(vars, na.rm=T))
@@ -217,34 +171,40 @@ my.data <- data.frame(id = as.numeric(rownames(tracts@data[group_ind,])), value 
 my.data$id <- as.character(my.data$id)
 plotData <- left_join(polyfortified,my.data, by = "id")
 
-title_string <- ifelse(PRE_bool, "Preterm birth", "Stillbirth")
+title_string <- paste0(ifelse(PRE_bool, "Preterm birth", "Stillbirth"),": neighborhood probabilities")
 palette <- ifelse(PRE_bool, "RdYlGn", "RdYlBu")
 
 p <- ggmap(googlemap) #ggplot()
 p <- p + geom_polygon(data=plotData, aes(x=long,y=lat,group=group,fill=value),
                       color=alpha("black",0.15), alpha =1) + ggtitle(title_string)
-if(alpha_bool){
-  p <- p + scale_fill_distiller(palette = palette, limits = c(MI,MA), values = c(0,z_adj,1), name =expression(hat(alpha)[i]))
-} else {
-  p <- p + scale_fill_distiller(palette = palette, limits = c(MI,MA), values = c(0,z_adj,1), name =expression(hat(p)[i]))
-}
-p <- p + theme(plot.title = element_text(hjust = 0.5, vjust = -1,size=23),
-        panel.border =  element_rect(colour = 'transparent', fill = 'transparent'),
-        axis.ticks = element_blank(),
-        panel.spacing = unit(0, 'mm'), axis.text = element_blank(),
-        panel.grid = element_blank(), axis.title = element_blank(),
-        legend.key.height = unit(1,"cm"),
-        legend.text=element_text(size=15),
-        legend.title = element_text(size=15),
-        legend.justification = c(1,0.035), legend.position = c(1,0.035),
-        legend.background = element_rect(fill= alpha("white",0.6)))
+p <- p + scale_fill_distiller(palette = palette, limits = c(MI,MA), values = c(0,z_adj,1), name =expression(hat(p)[i]))
+p <- p + theme(plot.title = element_text(hjust = 0.5, vjust = -0.5,size=23),
+               panel.border =  element_rect(colour = 'transparent', fill = 'transparent'),
+               axis.ticks = element_blank(),
+               panel.spacing = unit(0, 'mm'), axis.text = element_blank(),
+               panel.grid = element_blank(), axis.title = element_blank(),
+               legend.key.height = unit(1,"cm"),
+               legend.text=element_text(size=15),
+               legend.title = element_text(size=15),
+               legend.justification = c(1,0.035), legend.position = c(1,0.035),
+               legend.background = element_rect(fill= alpha("white",0.6)))
 p <- p + scale_bar(lon = -75.17, lat = 39.825, 
-                         distance_lon = 5, distance_lat = 0.5, distance_legend = 1.1, 
-                         dist_unit = "km", orientation = FALSE)
-# p
-file_name <- ifelse(alpha_bool, "alpha", ifelse(phat_bool, "phat", ifelse(shift_bool, "phat2shift", "phat2")))
+                   distance_lon = 5, distance_lat = 0.5, distance_legend = 1.1, 
+                   dist_unit = "km", orientation = FALSE)
+
+file_name <- paste0("new_", ifelse(phat_bool, ifelse(shift_bool, "phat_shift", "phat"), 
+                    ifelse(shift_bool, "phat2shift", "phat2")))
 file_name <- paste0(file_name, "_", ifelse(PRE_bool, "PRE", "STILL"),"_")
-file_name <- paste0(file_name, ifelse(SMOTE_bool, "SMOTE", "noSMOTE"),"_")
-file_name <- paste0(file_name, ifelse(PRE_bool, "ind.png", "CAR.png"))
+file_name <- paste0(file_name, ifelse(reweight_bool, "reweight", "noSMOTE"),"_")
+file_name <- paste0(file_name, ifelse(PRE_bool, "CAR.png", "CAR.png"))
 ggsave(file_name, p, scale = 1, width = 8, height = 8, units = 'in')
+
+
+#############################################################################
+########### Map of cluster assignments (bottom panels of fig 5) #############
+#############################################################################
+
+## See neigh_cluster_analysis.R for this map
+
+
 

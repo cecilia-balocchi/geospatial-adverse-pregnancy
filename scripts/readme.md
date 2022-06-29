@@ -6,19 +6,18 @@ The script `import_data.R` loads the fake pregnancies dataset, merges it with th
 
 The script `meta_script.R` runs all the models considered. It imports code from other scripts:
 - `MCMC_pg.R` contains the function to run the MCMC using Polya-Gamma (pg),
-- `philly_alldata.R` runs the MCMC when all the data is used (no leave one out by year),
-- `philly_LOO.R` runs the MCMC when the leave one out by year is used.
+- `philly_train_test.R` runs the MCMC with testing set defined by the last year of data (default)
+- `philly_alldata.R` runs the MCMC when all the data is used (no leave one out by year) (optional, discarded)
+- `philly_LOO.R` runs the MCMC when the leave one out by year is used. (optional, discarded)
 
-Several options are set before running each model, which are used to select the right code within `philly_alldata.R` and `philly_LOO.R`:
-- `smote_bool`, which is set to TRUE when we want to run a model using SMOTE
+Several options are set before running each model, which are used to select the right code within `philly_train_test.R`:
 - `outcome`, which can be "PRETERM" or "STILLBIRTH"
 - `noRE_bool`, which is set to FALSE when we want to run a model with random effects
 - `prior`, which can be "CAR" or "independent", selects the prior for the random effects and is used when `noRE_bool` is equal to FALSE.
-(interaction_bool, neigh_bool, noNH_WHITE_bool, newseed_bool)
+
+Similarly, the script `meta_script_supplement.R` runs the bayesian models which are reported in the supplement. 
 
 ## Creating tables and figures
 
-The script `create_figures.R` creates the illustration for the bayes-p and the plot of the log-odds (Figures .. and .. in the manuscript).
-The script `create_maps.R` creates the maps of the proportions of pregnancies events and of the predicted probabilities. (TODO complete create_maps.R with the map of proportions). The script `functions_scale.R` was downloaded from http://egallic.fr/en/scale-bar-and-north-arrow-on-a-ggplot2-map/ and used to add a bar with a scale for the map.
-
-The script `create_tables.R` creates the table reported in the manuscript.
+The scripts `create_figures.R`, `create_maps.R` and `create_tables.R` creates the figures, maps and tables reported in the manuscript and supplement, except for those related to the neighborhood cluster analysis, which are created in `neigh_cluster_analysis.R`.
+The script `functions_scale.R` was downloaded from http://egallic.fr/en/scale-bar-and-north-arrow-on-a-ggplot2-map/ and used to add a bar with a scale for maps.

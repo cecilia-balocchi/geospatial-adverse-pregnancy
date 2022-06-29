@@ -2,112 +2,101 @@
 library(dplyr)
 library(pROC)
 library(sp)
-library(DMwR) # Needed for the SMOTE method
+library(LaplacesDemon)  # for MCSE and ESS
+
+## packages that are not needed for replication, but that we used at some point
+library(MLmetrics) 				# to compute PR-AUC
 
 source("scripts/MCMC_pg.R")
+source("scripts/functions_for_race.R")
 
-# these will not be changed
 interaction_bool <- FALSE		# do not consider interactions between patient-level and neighborhood level races variables
 neigh_bool <- TRUE				# include neighborhood-level data among the covariates
-noNH_WHITE_bool <- TRUE			# do not include the patient-level race variable for `White`, to avoid collinearity between covariates
 newseed_bool <- FALSE			# consider a different seed to avoid running SMOTE with some neighborhoods having no data
+smote_bool <- FALSE				# do not use SMOTE (discarded because our focus in not only on predictions)
+reweight_bool <- FALSE			# do not use a reweighted likelihood (discarded because our focus in not only on predictions)
+alpha_vs_beta_bool <- TRUE 		# determines which kind of reweight. Does not matter because reweight_bool is FALSE
 
 burnin <- 500
-thin <- 10
-mcmc_niter <- 500*thin+burnin 	# with two chains we should have a total of 1000
+thin <- 5
+mcmc_niter <- 1000*thin+burnin	# with two chains we should have a total of 2000 (and approximately 1600 ESS)
 
-############################### All data & noSMOTE ###############################
-smote_bool <- FALSE
+##############################################################
+#################### Models in main paper ####################
+##############################################################
 
-############### PRETERM ###############
+########################## CAR model #########################
+
+###### PRETERM ######
 outcome <- "PRETERM"
 
 noRE_bool <- FALSE				# use a model with random effects
-prior <- "CAR"
-source("scripts/philly_alldata.R")
+prior <- "CAR"					# use a CAR prior on the random effects
+source("scripts/philly_train_test.R")
 
+###### STILLBIRTH ###### 
+outcome <- "STILLBIRTH"
+
+noRE_bool <- FALSE
+prior <- "CAR"
+source("scripts/philly_train_test.R")
+
+# To replicate the results in the paper, you do not need to run scripts past this point.
+
+##############################################################
+############ Additional models of possible interest ##########
+##############################################################
+
+################## independent RE model ######################
+
+# we compared the performance of CAR model with independent RE model
+
+###### PRETERM ######
+outcome <- "PRETERM"
 
 noRE_bool <- FALSE				# use a model with random effects
-prior <- "independent"
-source("scripts/philly_alldata.R")
+prior <- "independent"			# use a conditionally iid prior on the random effects
+source("scripts/philly_train_test.R")
 
+###### STILLBIRTH ###### 
+outcome <- "STILLBIRTH"
+
+noRE_bool <- FALSE
+prior <- "independent"
+source("scripts/philly_train_test.R")
+
+####################### no RE model ###########################
+
+# we initially considered a model without Random Effects
+
+###### PRETERM ######
+outcome <- "PRETERM"
 
 noRE_bool <- TRUE				# use a model without random effects
-source("scripts/philly_alldata.R")
+source("scripts/philly_train_test.R")
 
-############### STILLBIRTH ############### 
+###### STILLBIRTH ###### 
 outcome <- "STILLBIRTH"
 
+noRE_bool <- TRUE
+source("scripts/philly_train_test.R")
+
+########################### LOO ###############################
+
+# we considered a Leave-One-Out (LOO) approach where each year is iteratively used as testing set
+# any prior and outcome can be used here
+
+outcome <- "PRETERM"
 noRE_bool <- FALSE
 prior <- "CAR"
-source("scripts/philly_alldata.R")
+source("scripts/philly_LOO.R")
 
+######################### Alldata #############################
 
+# we initially considered fitting the model on the whole dataset (not advisable)
+# any prior and outcome can be used here
+
+outcome <- "STILLBIRTH"
 noRE_bool <- FALSE
 prior <- "independent"
 source("scripts/philly_alldata.R")
-
-
-noRE_bool <- TRUE
-source("scripts/philly_alldata.R")
-
-############################### All data & SMOTE (Only CAR now) ###############################
-
-smote_bool <- TRUE
-
-############### PRETERM ###############
-outcome <- "PRETERM"
-
-noRE_bool <- FALSE
-prior <- "CAR"
-source("scripts/philly_alldata.R")
-
-############### STILLBIRTH ############### 
-outcome <- "STILLBIRTH"
-newseed_bool <- TRUE
-
-noRE_bool <- FALSE
-prior <- "CAR"
-source("scripts/philly_alldata.R")
-newseed_bool <- FALSE
-
-
-############################### LOO & SMOTE (Only CAR now) ###############################
-smote_bool <- TRUE
-
-############### PRETERM ###############
-outcome <- "PRETERM"
-
-noRE_bool <- FALSE
-prior <- "CAR"
-source("scripts/philly_LOO.R")
-
-
-
-############### STILLBIRTH ############### 
-outcome <- "STILLBIRTH"
-newseed_bool <- TRUE
-
-noRE_bool <- FALSE
-prior <- "CAR"
-source("scripts/philly_LOO.R")
-newseed_bool <- FALSE
-
-############################### LOO & noSMOTE (Only CAR now) ###############################
-smote_bool <- FALSE
-
-############### PRETERM ###############
-outcome <- "PRETERM"
-
-noRE_bool <- FALSE
-prior <- "CAR"
-source("scripts/philly_LOO.R")
-
-
-
-############### STILLBIRTH ############### 
-outcome <- "STILLBIRTH"
-
-noRE_bool <- FALSE
-prior <- "CAR"
-source("scripts/philly_LOO.R")
