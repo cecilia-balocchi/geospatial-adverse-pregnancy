@@ -451,7 +451,7 @@ for(i_year in c(num.reps, 1:(num.reps-1))){
   avg_phat2shift_samples_list[[i_year]] <- avg_phat2shift_samples
 
   ### computing phat after computing posterior mean (discarded)
-  re_est = alpha_pm[mapping$tract[temp]] 
+  re_est = alpha_pm[index_mapping] 
   yhat_all <- covmat_scaled %*% matrix(beta_est, ncol = 1) + re_est
   phat_all <- exp(yhat_all) / (1 + exp(yhat_all))
     
@@ -491,17 +491,18 @@ for(i_year in c(num.reps, 1:(num.reps-1))){
   covmat_scaled <- get_covmat_scaled(data.preg.tractcov.atleast10TMP, ps_01, col_to_be_scaled_names, var_used)
   # some tracts will have 0 pregnancies out of sample, so they won't appear in the new 
   temp = match(data.preg.tractcov.atleast10TMP$tractID, mapping$tractID)
+  index_mapping <- mapping$tract[temp]
 
-  re_est = alpha_pm[mapping$tract[temp]] # this is equivalent to reordering mapping so that the order matches the out of sample
+  re_est = alpha_pm[index_mapping] # this is equivalent to reordering mapping so that the order matches the out of sample
   yhat_os <- covmat_scaled %*% matrix(beta_est, ncol = 1) + re_est
   phat_os <- exp(yhat_os) / (1 + exp(yhat_os))
   phat_os_shifted <- exp(yhat_os - gamma_opt) / (1 + exp(yhat_os - gamma_opt))
 
   y_os <- data.preg.tractcov.atleast10TMP[, outcome]
-  prauc[i_year] = PRAUC(y_pred = as.numeric(phat_os), y_true = as.numeric(y_os))
+  # prauc[i_year] = MLmetrics::PRAUC(y_pred = as.numeric(phat_os), y_true = as.numeric(y_os))
   rmse[i_year] <- mean((y_os - phat_os)^2)
   rmse_shifted[i_year] <- mean((y_os - phat_os_shifted)^2)
-  f1 = roc(as.numeric(y_os) ~ as.numeric(phat_os), levels = c(0,1), direction = "<")      # Obtain the AUC (area under the curve)
+  f1 = pROC::roc(as.numeric(y_os) ~ as.numeric(phat_os), levels = c(0,1), direction = "<")      # Obtain the AUC (area under the curve)
   roc_output_list[[i_year]] <- f1
   auc[i_year] = as.numeric(auc(f1))
   threshold_Youden <- f1$thresholds[which.max(f1$sensitivities + f1$specificities - 1)]
@@ -513,7 +514,7 @@ for(i_year in c(num.reps, 1:(num.reps-1))){
   spec[i_year] <- length(correct.neg)/length(which(y_os==0))
     
   # compute DIC (this is computed on out of sample data)
-  alphai_samples <- tmp$alpha[mapping$tract[temp],, drop = FALSE] + covmat_scaled %*% tmp$beta
+  alphai_samples <- tmp$alpha[index_mapping,, drop = FALSE] + covmat_scaled %*% tmp$beta
   pi_samples <- exp(alphai_samples)/(1+exp(alphai_samples))
   pi_pm <- rowMeans(pi_samples)
   yi <- data.preg.tractcov.atleast10TMP[,outcome]
@@ -628,7 +629,7 @@ varlist <- c("outcome","prior","interaction_bool","smote_bool","neigh_bool", "va
              # new phat's
              "gamma_opts_new","f_opts_new",
              "avg_phat_samples_list","avg_yhat_samples_list","avg_phat2_samples_list",
-             "avg_phat2shift_samples_list","avg_phat_shift_samples_list"
+             "avg_phat2shift_samples_list","avg_phat_shift_samples_list",
              # old phat's
              "mean_phat_is_list","mean_phat_all_list", "phat_neig_list",
              "mean_phat2_is_list","mean_phat2_all_list", 
@@ -658,5 +659,5 @@ if(noRE_bool == TRUE){
   filename <- paste0(filename, "_noRE")
 }
 filename <- paste0(filename, "_newcov_", outcome, "_",prior,".RData")
-save(list = varlist, file = paste0(fldr, "scripts/", filename))
+save(list = varlist, file = paste0("results/", filename))
 

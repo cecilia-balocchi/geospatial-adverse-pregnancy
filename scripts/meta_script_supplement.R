@@ -3,8 +3,10 @@ library(dplyr)
 library(pROC)
 library(sp)
 library(performanceEstimation) 	# Needed for the SMOTE method
-library(coda)			# ?
-library(LaplacesDemon)  # ?
+library(LaplacesDemon)          # for MCSE and ESS
+
+## packages that are not needed for replication, but that we used at some point
+# library(MLmetrics) 				# to compute PR-AUC (uncomment line 494 in philly_train_test.R to compute PRAUC)
 
 source("scripts/MCMC_pg.R")
 source("scripts/functions_for_race.R")

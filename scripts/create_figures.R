@@ -48,7 +48,7 @@ plot(bde(rhos_STILLBIRTH,estimator="boundarykernel",
      ylab = "", main = "Stillbirth", xlab = expression(rho))
 plot(bde(rhos_PRETERM,estimator="boundarykernel",
          lower.limit = 0,upper.limit = 1,options = list(mu=1)), 
-     ylab = "", main = "Stillbirth", xlab = expression(rho))
+     ylab = "", main = "Preterm Birth", xlab = expression(rho))
 dev.off()
 
 ##################################################################
@@ -230,14 +230,12 @@ order_covariates <- c("age","Black","Hispanic","Asian","multiple birth",
                       "violent crime","nonviolent crime")
 index <- match(order_covariates,c(var_individual, var_neighborhood))
 
-
+add_str2 <- "_YEAR8"
 for(output_string in c("PRETERM", "STILLBIRTH")){
   for(add_str in c("", "SMOTE_")){
     if(add_str == "") {
-      wdstr <- wdstr_new; add_str2 <- "_YEAR8"
       filestr <- paste0(wdstr,"output_LOO_nogamma_rho_nointeractions_",add_str,"newcov_",output_string,"_CAR",add_str2,".RData")
     } else {
-      wdstr <- wdstr_old; add_str2 <- ""
       filestr <- paste0(wdstr,"output_LOO_nogamma_rho_",add_str,"nointeractions_newcov_",output_string,"_CAR",add_str2,".RData")
     }
     tmp <-load(filestr)
@@ -343,7 +341,7 @@ order_covariates <- c("age","Black","Hispanic","Asian","multiple birth",
                       "violent crime","nonviolent crime")
 index <- match(order_covariates,c(var_individual, var_neighborhood))
 
-year <- 8; wdstr <- wdstr_new; add_str2 <- "_YEAR8"
+year <- 8; add_str2 <- "_YEAR8"
 for(output_string in c("PRETERM", "STILLBIRTH")){
   for(add_str in c("", "a-reweight_")){
     tmp <-load(paste0(wdstr,"output_LOO_nogamma_rho_nointeractions_",add_str,"newcov_",output_string,"_CAR",add_str2,".RData"))
@@ -421,13 +419,21 @@ dev.off()
 ######################## MCMC diagnostics (figure S4) #######################
 #############################################################################
 
+var_neighborhood <- c("proportion Asian","proportion Hispanic","proportion Black", # "Prop_White", 
+                      "proportion women", "poverty", 
+                      "public assistance", "labor force", 
+                      "recent birth", "high school grad", 
+                      "college grad", "occupied housing", "housing violation", 
+                      "violent crime", "nonviolent crime")
+var_individual <- c("Hispanic","Black", "Asian", "multiple birth", "age")
+vars <- c(var_individual, var_neighborhood)
+
 burnin <- 500
 thin <- 5
 mcmc_niter <- 1000*thin+burnin 
 index_thinning <- seq(burnin, mcmc_niter, by = thin)
 
 year <- 8; add_str = ""; add_str2 <- "_YEAR8"
-
 for(output_string in c("PRETERM", "STILLBIRTH")){
   tmp <-load(paste0(wdstr,"output_LOO_nogamma_rho_nointeractions_",add_str,"newcov_",output_string,"_CAR",add_str2,".RData"))
   

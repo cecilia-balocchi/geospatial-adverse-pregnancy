@@ -5,7 +5,7 @@ library(sp)
 library(LaplacesDemon)  # for MCSE and ESS
 
 ## packages that are not needed for replication, but that we used at some point
-library(MLmetrics) 				# to compute PR-AUC
+# library(MLmetrics) 				# to compute PR-AUC (uncomment line 494 in philly_train_test.R to compute PRAUC)
 
 source("scripts/MCMC_pg.R")
 source("scripts/functions_for_race.R")
@@ -90,13 +90,3 @@ outcome <- "PRETERM"
 noRE_bool <- FALSE
 prior <- "CAR"
 source("scripts/philly_LOO.R")
-
-######################### Alldata #############################
-
-# we initially considered fitting the model on the whole dataset (not advisable)
-# any prior and outcome can be used here
-
-outcome <- "STILLBIRTH"
-noRE_bool <- FALSE
-prior <- "independent"
-source("scripts/philly_alldata.R")

@@ -142,7 +142,7 @@ CI_STILL
 
 year <- 8; add_str = ""; add_str2 <- "_YEAR8"
 for(output_string in c("PRETERM", "STILLBIRTH")){
-  tmp <-load(paste0(wdstr,"phat_output_LOO_nogamma_rho_nointeractions_",add_str,"newcov_",output_string,"_CAR",add_str2,".RData"))
+  tmp <-load(paste0(wdstr,"output_LOO_nogamma_rho_nointeractions_",add_str,"newcov_",output_string,"_CAR",add_str2,".RData"))
   
   data_CAR <- get(paste0("data_CAR_",ifelse(output_string == "PRETERM","PRE","STILL")))
   cl <- get(paste0("cl", ifelse(output_string == "PRETERM", "1","2")))

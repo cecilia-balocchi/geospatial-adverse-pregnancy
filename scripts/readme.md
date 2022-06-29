@@ -7,7 +7,6 @@ The script `import_data.R` loads the fake pregnancies dataset, merges it with th
 The script `meta_script.R` runs all the models considered. It imports code from other scripts:
 - `MCMC_pg.R` contains the function to run the MCMC using Polya-Gamma (pg),
 - `philly_train_test.R` runs the MCMC with testing set defined by the last year of data (default)
-- `philly_alldata.R` runs the MCMC when all the data is used (no leave one out by year) (optional, discarded)
 - `philly_LOO.R` runs the MCMC when the leave one out by year is used. (optional, discarded)
 
 Several options are set before running each model, which are used to select the right code within `philly_train_test.R`:

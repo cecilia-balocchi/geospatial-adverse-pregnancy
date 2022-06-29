@@ -217,6 +217,7 @@ noSMOTE_new <- c(auc[year], DIC[year], rmse[year], DIC_shifted[year], rmse_shift
 add_str <- "a-reweight_"
 tmp <-load(paste0(wdstr,"output_LOO_nogamma_rho_nointeractions_",add_str,"newcov_",output_string,"_CAR",add_str2,".RData"))
 reweigh_new <- c(auc[year], DIC[year], rmse[year], DIC_shifted[year], rmse_shifted[year], misclass[year], sens[year], spec[year])
+add_str <- ""
 tmp <- load(paste0(wdstr,"output_LOO_nogamma_rho_SMOTE_nointeractions_",add_str,"newcov_",output_string,"_CAR",add_str2,".RData"))
 SMOTE_new <- c(auc[year], DIC[year], rmse[year], DIC_shifted[year], rmse_shifted[year], misclass[year], sens[year], spec[year])
 
@@ -233,10 +234,11 @@ noSMOTE_new <- c(auc[year], DIC[year], rmse[year], DIC_shifted[year], rmse_shift
 add_str <- "a-reweight_"
 tmp <-load(paste0(wdstr,"output_LOO_nogamma_rho_nointeractions_",add_str,"newcov_",output_string,"_CAR",add_str2,".RData"))
 reweigh_new <- c(auc[year], DIC[year], rmse[year], DIC_shifted[year], rmse_shifted[year], misclass[year], sens[year], spec[year])
+add_str <- ""
 tmp <- load(paste0(wdstr,"output_LOO_nogamma_rho_SMOTE_nointeractions_",add_str,"newcov_",output_string,"_CAR",add_str2,".RData"))
 SMOTE_new <- c(auc[year], DIC[year], rmse[year], DIC_shifted[year], rmse_shifted[year], misclass[year], sens[year], spec[year])
 
-res_pret_loo <- rbind(noSMOTE_new,SMOTE_new,reweigh_new)
+res_still_loo <- rbind(noSMOTE_new,SMOTE_new,reweigh_new)
 colnames(res_still_loo) <- c("AUC", "DIC","rmse","DIC*","rmse*","MR", "sens", "spec")
 res_still <- res_still_loo[,-(2:5)]
 
