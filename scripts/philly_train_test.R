@@ -44,7 +44,6 @@ tractID_unique_list <- list()
 alpha_reweight_list <- list()
 beta_reweight_list <- list()
 
-# TODO these need to fixed with the new phat
 mean_phat_is_list <- list()
 mean_phat2_is_list <- list()
 mean_phat2shift_is_list <- list()
