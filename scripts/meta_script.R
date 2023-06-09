@@ -13,9 +13,6 @@ source("scripts/functions_for_race.R")
 interaction_bool <- FALSE		# do not consider interactions between patient-level and neighborhood level races variables
 neigh_bool <- TRUE				# include neighborhood-level data among the covariates
 newseed_bool <- FALSE			# consider a different seed to avoid running SMOTE with some neighborhoods having no data
-smote_bool <- FALSE				# do not use SMOTE (discarded because our focus in not only on predictions)
-reweight_bool <- FALSE			# do not use a reweighted likelihood (discarded because our focus in not only on predictions)
-alpha_vs_beta_bool <- TRUE 		# determines which kind of reweight. Does not matter because reweight_bool is FALSE
 
 burnin <- 500
 thin <- 5

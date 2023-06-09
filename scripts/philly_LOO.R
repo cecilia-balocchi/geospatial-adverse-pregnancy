@@ -40,8 +40,6 @@ my_scale_list <- list()
 scale_means_list <- list()
 scale_sds_list <- list()
 tractID_unique_list <- list()
-alpha_reweight_list <- list()
-beta_reweight_list <- list()
 
 # new phat's
 avg_phat_samples_list <- list()
@@ -72,7 +70,6 @@ var_neighborhood <- c("Prop_Asian", "Prop_Hispanic_Latino", "Prop_Black",
                       "Prop_BachelorsDegree_women15to50", "log.occupied.housing", "log.violation", 
                       "log.violent", "log.nonviolent")
 var_individual <- c("HISPANIC", "NH_AFAM", "NH_ASIAN", "MULTIPLE_BIRTH", "ENC_AGE_DEC")
-var_individual_SMOTE <- c("RACE", "MULTIPLE_BIRTH", "ENC_AGE_DEC")
 if(interaction_bool == TRUE){
   var_individual <- c(var_individual, "black_interaction", "white_interaction", "asian_interaction", "hispanic_interaction")
 }
@@ -84,12 +81,10 @@ ps_01 <- var_individual[-p1]
 if(neigh_bool == TRUE){
   p_used <- p1+p2
   var_used <- c(var_individual, var_neighborhood)
-  var_used_SMOTE <- c(var_individual_SMOTE, var_neighborhood)
   col_to_be_scaled_names <- c("ENC_AGE_DEC",var_neighborhood) # of the individual, we only scale AGE
 } else {
   p_used <- p1
   var_used <- var_individual
-  var_used_SMOTE <- var_individual_SMOTE
   col_to_be_scaled_names <- "ENC_AGE_DEC"                     # of the individual, we only scale AGE
 }
 sig.cov = array(NA,dim = c(p_used, num.reps))
@@ -117,8 +112,6 @@ set.seed(123456)
 if(newseed_bool){
   set.seed(12345678)
 }
-seed_smote <- sample(x = 1e+6, size = 1)
-seeds_aftersmote <- sample(x = 1e+6, size = num.reps)
 for(i_year in c(num.reps, 1:(num.reps-1))){
   ## find test and training indices
   test.indices = which(data.preg.tractcov.atleast10$YEAR == years[i_year])
@@ -137,131 +130,19 @@ for(i_year in c(num.reps, 1:(num.reps-1))){
   overall_prob_train <- mean(data.preg.tractcov.atleast10TMP[,outcome])
   data.preg.tractcov.atleast10TMP <- binary_to_factor(data.preg.tractcov.atleast10TMP)
 
-  if(smote_bool == TRUE){
-    data.preg.tractcov.atleast10TMP[,outcome] <- as.factor(data.preg.tractcov.atleast10TMP[,outcome])
-    data.preg.tractcov.atleast10TMP[,"YEAR"] <- as.factor(data.preg.tractcov.atleast10TMP[,"YEAR"])
-    
-    over <- 200
-    under <- 200
-    
-    set.seed(seed_smote)
-    if(outcome == "PRETERM"){
-      data_smoted <- performanceEstimation::smote(PRETERM ~ .,
-                                                  data = data.preg.tractcov.atleast10TMP[,c("LONGITUDE", "LATITUDE","YEAR", var_individual_SMOTE,outcome)],
-                                                  perc.over = over/100, perc.under = under/100)
-    } else if(outcome == "STILLBIRTH"){
-      data_smoted <- performanceEstimation::smote(STILLBIRTH ~ .,
-                                                  data = data.preg.tractcov.atleast10TMP[,c("LONGITUDE", "LATITUDE","YEAR", var_individual_SMOTE,outcome)],
-                                                  perc.over = over/100, perc.under = under/100)
-    } else if(outcome == "CSECTION"){
-      data_smoted <- performanceEstimation::smote(CSECTION ~ .,
-                                                  data = data.preg.tractcov.atleast10TMP[,c("LONGITUDE", "LATITUDE","YEAR", var_individual_SMOTE,outcome)],
-                                                  perc.over = over/100, perc.under = under/100)
-    } else {
-      warning("Outcome ", outcome," not supported.")
-    }
-    data.preg.tractcov.atleast10TMP[,"YEAR"] <- as.numeric(as.character(data.preg.tractcov.atleast10TMP[,"YEAR"]))
-    data_smoted[,"YEAR"] <- as.numeric(as.character(data_smoted[,"YEAR"]))
-    set.seed(seeds_aftersmote[i_year])
-    
-    ### need to deal with the geographic location and tractID
-    pts <- SpatialPoints(data_smoted[ ,c('LONGITUDE', 'LATITUDE')])
-    databytracts <- sp::over(tracts, pts, returnList = T)
-    datavector <- unlist(databytracts)
-    datatractlength <- lapply(databytracts, length)
-    dataind.temp <- c(0, cumsum(datatractlength))
-    levels_region <- levels(tracts@data$GEOID10)[tracts@data$GEOID10]
-    mapping <- data.frame(tract = NA, tractID = NA, row_index = datavector)
-    for(i in 1:length(databytracts)){
-      if(datatractlength[i]>0){
-        temp.index <- (dataind.temp[i] + 1): (dataind.temp[i + 1])
-        mapping$tract[temp.index] = i
-        mapping$tractID[temp.index] = levels_region[i]
-      }
-    }
-    
-    
-    ## we should exclude the rows that are NOT in the tracts that we are considering
-    to_keep <- which(mapping$tractID %in% tractID_tokeep)
-    to_throw <- which(!(mapping$tractID %in% tractID_tokeep))
-    mapping_keep <- mapping[to_keep,]
-    data_smoted_keep <- data_smoted[mapping_keep$row_index,] 
-    ## now data_smoted_keep is sorted according to mapping (tract and tractID)
-    ## now mapping$row_index does not correspond to the row index of data_smoted_keep, but of the old data_smoted
-    data_smoted_keep <- cbind(data_smoted_keep, mapping_keep$tractID)
-    colnames(data_smoted_keep)[ncol(data_smoted_keep)] <- "tractID"
-    
 
-    # let's create data.preg.tractcov.atleast10TMP
-    if(neigh_bool == TRUE){
-      ## let's create data.preg.tractcov.atleast10TMP by matching the neighborhood covariates 
-      index <- match(interaction(data_smoted_keep[,c("tractID","YEAR")]), interaction(data.preg.tractcov.atleast10TMP[,c("tractID","YEAR")]))
-      data.preg.tractcov.atleast10TMP2 <- cbind(data_smoted_keep, data.preg.tractcov.atleast10TMP[index, var_neighborhood])
-    } else {
-      data.preg.tractcov.atleast10TMP2 <- data_smoted_keep
-    }
-    if(sum(is.na(data.preg.tractcov.atleast10TMP2))>0){
-      ## some NA can be created if there was no tractID-YEAR combination in the original set.
-      # warning("Still NA present - removing them in iter",i_year)
-      indexNA <- which(apply(data.preg.tractcov.atleast10TMP2[,var_used_SMOTE], # maybe you could just use "var_used" here
-                             MARGIN = 1, function(x) any(is.na(x))))
-      data.preg.tractcov.atleast10TMP2 <- data.preg.tractcov.atleast10TMP2[-indexNA,]
-      mapping_keep <- mapping_keep[-indexNA,]
-    }
-
-
-    # if some neighborhood are missing, we add them back from the original dataset
-    if(length(unique(mapping_keep$tractID)) < length(tractID_tokeep)){
-      tractID_kept <- unique(mapping_keep$tractID)
-      tractID_missing <- tractID_tokeep[which(!(tractID_tokeep %in% tractID_kept))]
-      index_reuse <- which(data.preg.tractcov.atleast10TMP$tractID %in% tractID_missing)
-      if(length(tractID_missing)>0 & length(index_reuse)==0){
-        warning("data.preg.tractcov.atleast10TMP does not contain data from tractID_missing.")
-      }
-      ## we will just add the data that was excluded (probably from the majority class)
-      add <- data.preg.tractcov.atleast10TMP[index_reuse,c("LONGITUDE", "LATITUDE","YEAR", var_individual_SMOTE,outcome,"tractID",var_neighborhood)]
-      data.preg.tractcov.atleast10TMP2 <- rbind(data.preg.tractcov.atleast10TMP2, add)
-      mapping_add <- data.frame(tract = NA, 
-                                tractID = data.preg.tractcov.atleast10TMP[index_reuse, "tractID"], 
-                                row_index = (nrow(data.preg.tractcov.atleast10TMP2)-nrow(add)+1):nrow(data.preg.tractcov.atleast10TMP2))
-      for(i in 1:length(index_reuse)){
-        mapping_add[i,"tract"] <- which(mapping_add[i,"tractID"] == levels_region)
-      }
-      mapping_keep <- rbind(mapping_keep, mapping_add)
-    }
-    data.preg.tractcov.atleast10TMP <- data.preg.tractcov.atleast10TMP2
-    data.preg.tractcov.atleast10TMP[,outcome] = as.numeric(as.character(data.preg.tractcov.atleast10TMP[,outcome]))
-    
-    ## now let's create new_mapping. mapping is sorted like data.preg.tractcov.atleast10TMP
-    mapping <- mapping_keep 
-    # columns are tract, tractID, row_index
-    tractID_unique <- unique(mapping$tractID) # these are not sorted, they're in the order of appearance
-    tractID_unique_list[[i_year]] <- tractID_unique
-    mapping$new_tract <- match(mapping$tractID, tractID_unique) 
-    # NOW columns are tract, tractID, row_index, new_tract
-    new_mapping <- mapping[,c(4,2)]
-    names(new_mapping)[1] <- "tract"
-    if(noRE_bool){
-      ## this is only for single intercept:
-      new_mapping$tract <- 1 
-    }
-    mapping <- new_mapping
-    # NOW columns are tract(new_tract), tractID
-    
-  } else {
-    unik_tractID <- unique(data.preg.tractcov.atleast10TMP$tractID)
-    unik_yearID <- unique(data.preg.tractcov.atleast10TMP$YEAR)
-    mapping <- data.frame(tract = NA, year = NA, 
-                          tractID = data.preg.tractcov.atleast10TMP$tractID, 
-                          yearID = data.preg.tractcov.atleast10TMP$YEAR)
-    mapping$tract = match(mapping$tractID, unik_tractID)
-    mapping$year = match(mapping$yearID, unik_yearID)
-    tractID_unique <- unique(mapping$tractID)
-    tractID_unique_list[[i_year]] <- tractID_unique
-    if(noRE_bool){
-      ## this is only for single intercept:
-      mapping$tract <- 1 
-    }
+  unik_tractID <- unique(data.preg.tractcov.atleast10TMP$tractID)
+  unik_yearID <- unique(data.preg.tractcov.atleast10TMP$YEAR)
+  mapping <- data.frame(tract = NA, year = NA, 
+                        tractID = data.preg.tractcov.atleast10TMP$tractID, 
+                        yearID = data.preg.tractcov.atleast10TMP$YEAR)
+  mapping$tract = match(mapping$tractID, unik_tractID)
+  mapping$year = match(mapping$yearID, unik_yearID)
+  tractID_unique <- unique(mapping$tractID)
+  tractID_unique_list[[i_year]] <- tractID_unique
+  if(noRE_bool){
+    ## this is only for single intercept:
+    mapping$tract <- 1 
   }
   
   data.preg.tractcov.atleast10TMP <- factor_to_binary(data.preg.tractcov.atleast10TMP)
@@ -311,25 +192,8 @@ for(i_year in c(num.reps, 1:(num.reps-1))){
     sample_rho <- FALSE
   }
 
-  ## Construct the weights for the training set
-  n.train = nrow(data.preg.tractcov.atleast10TMP)
-  num.cases = sum(data.preg.tractcov.atleast10TMP[,outcome])
-  num.controls = n.train-num.cases
-  ratio = num.cases/num.controls
-  if(reweight_bool){
-    if(alpha_vs_beta_bool){
-      alpha_reweight = ratio
-      beta_reweight = 1
-    } else {
-      alpha_reweight = 1
-      beta_reweight = 1/ratio
-    }
-  } else {
-    alpha_reweight = 1
-    beta_reweight = 1
-  }
-  alpha_reweight_list[[i_year]] <- alpha_reweight
-  beta_reweight_list[[i_year]] <- beta_reweight
+  alpha_reweight = 1
+  beta_reweight = 1
   
   ptm <- proc.time()
   tmp1 <- mcmc(y = data.preg.tractcov.atleast10TMP[,outcome], 
@@ -621,7 +485,7 @@ for(i_year in c(num.reps, 1:(num.reps-1))){
 
 }
 
-varlist <- c("outcome","prior","interaction_bool","smote_bool","neigh_bool", "var_used", "p_used",
+varlist <- c("outcome","prior","interaction_bool","neigh_bool", "var_used", "p_used",
              "misclass", "sens", "spec", "auc", "sig.cov", "DIC", "rmse", "thresholds",
              "DIC_shifted", "rmse_shifted","index_thinning",
              "output_list1","output_list2","XtX_list","my_scale_list", "scale_means_list", "scale_sds_list",
@@ -635,24 +499,17 @@ varlist <- c("outcome","prior","interaction_bool","smote_bool","neigh_bool", "va
              "mean_phat2_is_list","mean_phat2_all_list", 
              "mean_phat2shift_is_list","mean_phat2shift_all_list", "phat_neigshift_list",
              #
-             "alpha_reweight_list","beta_reweight_list",
              "roc_output_list",
              "WAIC1_shifted", "WAIC2_shifted", "WAIC1", "WAIC2",
              "medianrho", "gamma_opts", "f_opts",
              "prauc","prop_cases_test", "prop_cases_train",
              "ES2", "MCSE","ES2_thin", "MCSE_thin")
 filename <- "output_LOO_nogamma_rho"
-if(smote_bool == TRUE){
-  filename <- paste0(filename, "_SMOTE")
-}
 if(interaction_bool == FALSE){
   filename <- paste0(filename, "_nointeractions")
 }
 if(neigh_bool == FALSE){
   filename <- paste0(filename, "_noneigh")
-}
-if(reweight_bool == TRUE){
-  filename <- paste0(filename,ifelse(alpha_vs_beta_bool, "_a-reweight", "_b-reweight"))
 }
 
 if(noRE_bool == TRUE){
